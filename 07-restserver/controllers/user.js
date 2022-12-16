@@ -6,24 +6,53 @@ const bcrypt = require('bcryptjs');
 const Usuario = new require('../models/usuario');
 
 
-const usuariosGet = (req, res = response) => {
+const usuariosGet = async (req, res = response) => {
 
-    const {q, nomb = "asd"} = req.query;
+    // const {q, nomb = "asd"} = req.query;
+    const { limite = 5, desde = 0 } = req.query;
+    const query = {estado: true};
+    // const usuarios = await Usuario.find(query)
+    //                                 .limit(Number(limite))
+    //                                 .skip(Number(desde));
+
+    // const total = await Usuario.countDocuments(query);
+
+    const [ total, usuarios ] = await Promise.all([
+        Usuario.countDocuments(query),
+        Usuario.find(query)
+                .limit(Number(limite))
+                .skip(Number(desde))
+    ])
 
     res.json({
-        msg: "GET - Controller",
-        q,
-        nomb
-    })
+        // respuesta
+        total,
+        usuarios
+    });
+    // res.json({
+    //     msg: "GET - Controller",
+    //     q,
+    //     nomb
+    // })
 }
 
-const usuariosPut = (req, res = response) => {
+const usuariosPut = async (req, res = response) => {
 
-    const id = req.params.id;
+    const { id } = req.params;
+    const { _id, password, google, correo, ...resto } = req.body;
+
+    // Validar contra BD
+    if( password ){
+        //Encripta Password
+        const salt = bcrypt.genSaltSync();
+        resto.password = bcrypt.hashSync(password, salt);
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate( id, resto);
 
     res.json({
         msg: "PUT - Controller",
-        id: id
+        usuario
     })
 }
 
@@ -63,10 +92,19 @@ const usuariosPost = async (req, res = response) => {
     })
 }
 
-const usuariosDelete = (req, res = response) => {
+const usuariosDelete = async (req, res = response) => {
 
+    const { id } = req.params;
+
+    // Fisicamente
+    // const usuario = await Usuario.findByIdAndDelete( id );
+    
+    // Logico
+    const usuario = await Usuario.findByIdAndUpdate( id, { estado: false } );
+    
     res.json({
-        msg: "DELETE - Controller"
+        // msg: "DELETE - Controller",
+        usuario
     })
 }
 
